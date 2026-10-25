@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
 
-# In-memory "database" with Borrower details added
+# In-memory database
 library = {
     "books": [
         {"id": 1, "title": "The Pragmatic Programmer", "author": "Andrew Hunt", "available": True, "borrower": None},
@@ -17,7 +17,8 @@ library = {
 def index():
     total = len(library["books"])
     available = sum(1 for b in library["books"] if b["available"])
-    return render_template("index.html", total=total, available=available)
+    borrowed = total - available
+    return render_template("index.html", total=total, available=available, borrowed=borrowed)
 
 @app.route("/books")
 def view_books():
@@ -25,13 +26,13 @@ def view_books():
 
 @app.route("/available")
 def view_available():
-    available_books = [b for b in library["books"] if b["available"]]
-    return render_template("view_books.html", books=available_books, title="Available Books")
+    avail_books = [b for b in library["books"] if b["available"]]
+    return render_template("view_books.html", books=avail_books, title="Available Books")
 
 @app.route("/borrowed")
 def view_borrowed():
-    borrowed_books = [b for b in library["books"] if not b["available"]]
-    return render_template("view_books.html", books=borrowed_books, title="Borrowed Books")
+    borr_books = [b for b in library["books"] if not b["available"]]
+    return render_template("view_books.html", books=borr_books, title="Borrowed Books")
 
 @app.route("/add", methods=["GET", "POST"])
 def add_book():
@@ -46,26 +47,25 @@ def add_book():
         return redirect(url_for("view_books"))
     return render_template("add_book.html")
 
-@app.route("/toggle/<int:book_id>", methods=["POST"])
-def toggle_availability(book_id):
+@app.route("/borrow/<int:book_id>", methods=["POST"])
+def borrow_book(book_id):
+    borrower_name = request.form.get("borrower_name")
     for book in library["books"]:
         if book["id"] == book_id:
-            if book["available"]:
-                # It is available, so we are borrowing it
-                borrower_name = request.form.get("borrower")
-                if borrower_name:
-                    book["available"] = False
-                    book["borrower"] = borrower_name
-            else:
-                # It is borrowed, so we are returning it
-                book["available"] = True
-                book["borrower"] = None
+            if borrower_name:
+                book["available"] = False
+                book["borrower"] = borrower_name
             break
-    return redirect(request.referrer or url_for("view_books"))
+    return redirect(url_for("view_books"))
 
-@app.route("/health")
-def health():
-    return {"status": "healthy"}, 200
+@app.route("/return/<int:book_id>", methods=["POST"])
+def return_book(book_id):
+    for book in library["books"]:
+        if book["id"] == book_id:
+            book["available"] = True
+            book["borrower"] = None
+            break
+    return redirect(url_for("view_books"))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
