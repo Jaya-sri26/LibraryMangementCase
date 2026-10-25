@@ -14,17 +14,25 @@
         <td>{{ book.id }}</td>
         <td>{{ book.title }}</td>
         <td>{{ book.author }}</td>
-        <td>{{ "Available" if book.available else "Borrowed" }}</td>
+        <td>
+            <span style="color: {{ 'green' if book.available else 'red' }}; font-weight: bold;">
+                {{ "Available" if book.available else "Borrowed" }}
+            </span>
+        </td>
         <td>{{ book.borrower if book.borrower else "-" }}</td>
         <td>
-            <form method="POST" action="{{ url_for('toggle_availability', book_id=book.id) }}" style="display:flex; gap: 5px;">
-                {% if book.available %}
-                    <input type="text" name="borrower" placeholder="Your Name" required style="padding: 5px;">
-                    <button type="submit" style="background-color: #e67e22;">Borrow</button>
-                {% else %}
-                    <button type="submit" style="background-color: #27ae60;">Return</button>
-                {% endif %}
-            </form>
+            {% if book.available %}
+                <!-- Borrow Form -->
+                <form method="POST" action="{{ url_for('borrow_book', book_id=book.id) }}" style="display:flex; gap: 5px;">
+                    <input type="text" name="borrower_name" placeholder="Enter Name" required style="padding: 5px; border: 1px solid #ccc;">
+                    <button type="submit" style="background-color: #e67e22; cursor:pointer;">Borrow</button>
+                </form>
+            {% else %}
+                <!-- Return Form -->
+                <form method="POST" action="{{ url_for('return_book', book_id=book.id) }}">
+                    <button type="submit" style="background-color: #27ae60; cursor:pointer;">Return</button>
+                </form>
+            {% endif %}
         </td>
     </tr>
     {% endfor %}
