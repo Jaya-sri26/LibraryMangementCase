@@ -2,14 +2,16 @@ from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
 
+# In-memory "database" with Borrower details added
 library = {
     "books": [
-        {"id": 1, "title": "The Pragmatic Programmer", "author": "Andrew Hunt", "available": True},
-        {"id": 2, "title": "Clean Code", "author": "Robert C. Martin", "available": False},
-        {"id": 3, "title": "DevOps Handbook", "author": "Gene Kim", "available": True},
+        {"id": 1, "title": "The Pragmatic Programmer", "author": "Andrew Hunt", "available": True, "borrower": None},
+        {"id": 2, "title": "Clean Code", "author": "Robert C. Martin", "available": False, "borrower": "Rahul"},
+        {"id": 3, "title": "DevOps Handbook", "author": "Gene Kim", "available": True, "borrower": None},
+        {"id": 4, "title": "Python Crash Course", "author": "Eric Matthes", "available": False, "borrower": "Priya"},
+        {"id": 5, "title": "Atomic Habits", "author": "James Clear", "available": True, "borrower": None},
     ]
 }
-
 
 @app.route("/")
 def index():
@@ -17,11 +19,19 @@ def index():
     available = sum(1 for b in library["books"] if b["available"])
     return render_template("index.html", total=total, available=available)
 
-
 @app.route("/books")
 def view_books():
-    return render_template("view_books.html", books=library["books"])
+    return render_template("view_books.html", books=library["books"], title="All Books")
 
+@app.route("/available")
+def view_available():
+    available_books = [b for b in library["books"] if b["available"]]
+    return render_template("view_books.html", books=available_books, title="Available Books")
+
+@app.route("/borrowed")
+def view_borrowed():
+    borrowed_books = [b for b in library["books"] if not b["available"]]
+    return render_template("view_books.html", books=borrowed_books, title="Borrowed Books")
 
 @app.route("/add", methods=["GET", "POST"])
 def add_book():
@@ -31,25 +41,31 @@ def add_book():
         if title and author:
             new_id = max([b["id"] for b in library["books"]], default=0) + 1
             library["books"].append(
-                {"id": new_id, "title": title, "author": author, "available": True}
+                {"id": new_id, "title": title, "author": author, "available": True, "borrower": None}
             )
         return redirect(url_for("view_books"))
     return render_template("add_book.html")
 
-
-@app.route("/toggle/<int:book_id>")
+@app.route("/toggle/<int:book_id>", methods=["POST"])
 def toggle_availability(book_id):
     for book in library["books"]:
         if book["id"] == book_id:
-            book["available"] = not book["available"]
+            if book["available"]:
+                # It is available, so we are borrowing it
+                borrower_name = request.form.get("borrower")
+                if borrower_name:
+                    book["available"] = False
+                    book["borrower"] = borrower_name
+            else:
+                # It is borrowed, so we are returning it
+                book["available"] = True
+                book["borrower"] = None
             break
-    return redirect(url_for("view_books"))
-
+    return redirect(request.referrer or url_for("view_books"))
 
 @app.route("/health")
 def health():
     return {"status": "healthy"}, 200
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
