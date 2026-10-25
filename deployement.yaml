@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: libraryapp-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: libraryapp
+  template:
+    metadata:
+      labels:
+        app: libraryapp
+    spec:
+      containers:
+      - name: libraryapp
+        image: jaya02sri26/library:librarytestimage
+        ports:
+        - containerPort: 5001
